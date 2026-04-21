@@ -1,0 +1,37 @@
+{
+  "name": "youtube-research-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for YouTube video research with tools to search, analyze, and extract information from YouTube videos",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node build/index.js",
+    "start": "node build/index.js",
+    "content-gen": "tsc && node build/cli.js",
+    "notebook": "jupyter notebook content-processor.ipynb",
+    "notebook-exec": "jupyter nbconvert --to notebook --execute content-processor.ipynb --output content-processor-executed.ipynb",
+    "generate-video": "python generate_video.py",
+    "create": "python create_video.py",
+    "create:quick": "python create_video.py --quick",
+    "create:en": "python create_video.py --lang en",
+    "create:vi": "python create_video.py --lang vi",
+    "pipeline": "npm run content-gen && npm run notebook-exec && npm run generate-video",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "axios": "^1.15.1",
+    "dotenv": "^17.4.2",
+    "googleapis": "^171.4.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
