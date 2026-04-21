@@ -1,323 +1,98 @@
-# 🎬 YouTube Content Creation Pipeline
+# YouTube Automation Agent
 
-Một hệ thống tự động hoàn chỉnh để tạo nội dung YouTube từ tin tức → xử lý LLM → tạo video script.
+Automated pipeline: **Research → Synthesize → Create Video → Upload to YouTube**
 
-## 🎯 Tổng Quan
+## Architecture
 
-Pipeline này gồm 3 bước chính:
+```
+┌──────────────┐    ┌───────────────┐    ┌──────────────┐    ┌──────────┐
+│  1. RESEARCH │───▶│ 2. SYNTHESIZE │───▶│ 3. CREATE    │───▶│ 4.UPLOAD │
+│  (YouTube    │    │ (OpenAI       │    │    VIDEO     │    │(YouTube  │
+│   Data API)  │    │  GPT-4o)      │    │ (TTS+Slides) │    │  OAuth2) │
+└──────────────┘    └───────────────┘    └──────────────┘    └──────────┘
+  Search topic       Analyze data        Edge-TTS audio      Auto-upload
+  Get transcripts    Write script        PIL slide images    Set metadata
+  Get comments       SEO optimize        MoviePy assembly    Tags/desc
+```
 
-1. **📝 Content Generation** - Fetch tin tức từ nhiều nguồn (chính trị, crypto, thị trường)
-2. **🤖 LLM Processing** - Xử lý nội dung qua Claude API để tạo script video chuyên nghiệp
-3. **🎬 Video Script Creation** - Tạo video scripts với timing, visual guides, và metadata
-
-## 📋 Yêu Cầu
-
-- **Node.js 18+** (với npm)
-- **Python 3.8+**
-- **YouTube API Key** (từ Google Cloud Console)
-- **Anthropic API Key** (từ Claude.ai)
-
-## ⚙️ Cài Đặt
-
-### 1. Clone hoặc setup project
+## Quick Start
 
 ```bash
-cd "Claude Code Skill"
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Set up API keys in .env
+#    - YOUTUBE_API_KEY (from Google Cloud Console)
+#    - OPENAI_API_KEY (from OpenAI)
+#    - client_secrets.json (for YouTube upload - OAuth2)
+
+# 3. Run the agent
+python main.py "your topic here"
 ```
 
-### 2. Cài đặt Node dependencies
+## Usage
 
 ```bash
-npm install
+# Full pipeline (research + create + upload as private)
+python main.py "artificial intelligence trends 2026"
+
+# Create video without uploading
+python main.py "python programming tips" --no-upload
+
+# Upload as unlisted
+python main.py "crypto market analysis" --privacy unlisted
+
+# Research only (no video creation)
+python main.py "machine learning" --research-only
+
+# Custom voice and max results
+python main.py "tech news" --voice en-US-GuyNeural --max-results 15
+
+# Verbose logging
+python main.py "AI" -v
 ```
 
-### 3. Cài đặt Python dependencies (tùy chọn, cho Jupyter)
+## Setup Guide
 
-```bash
-pip install jupyter ipykernel anthropic
-```
+### 1. YouTube Data API Key (for search/research)
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project → Enable **YouTube Data API v3**
+3. Create API Key → Copy to `.env` as `YOUTUBE_API_KEY`
 
-### 4. Cấu hình API Keys
+### 2. OpenAI API Key (for content synthesis)
+1. Go to [OpenAI Platform](https://platform.openai.com/)
+2. Create API Key → Copy to `.env` as `OPENAI_API_KEY`
 
-Tạo file `.env` trong thư mục project:
+### 3. YouTube OAuth2 (for uploading)
+1. In Google Cloud Console → **APIs & Services** → **Credentials**
+2. Create **OAuth 2.0 Client ID** (Application type: Desktop App)
+3. Download JSON → Save as `client_secrets.json` in project root
+4. First run will open browser for authorization
 
-```
-YOUTUBE_API_KEY=your_youtube_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
-
-Lấy API keys:
-- **YouTube API**: https://console.cloud.google.com/
-- **Anthropic API**: https://console.anthropic.com/
-
-## 🚀 Chạy Pipeline
-
-### Cách 1: Batch Script (Windows) - Tự động toàn bộ
-
-```bash
-run-full-pipeline.bat
-```
-
-### Cách 2: Từng bước
-
-#### Bước 1: Tạo nội dung (CLI)
-
-```bash
-npm run content-gen
-```
-
-Điều này sẽ:
-- Fetch top 5 tin tức chính trị Mỹ
-- Fetch top 5 tin tức crypto (BTC/ETH)
-- Fetch top 5 tin tức thị trường (vàng, cổ phiếu)
-- Fetch tin tức việc làm
-- Tạo file markdown: `videos/YYYY-MM-DD/youtube-content-YYYY-MM-DD-{vi|en}.md`
-
-#### Bước 2: Xử lý với LLM (Jupyter Notebook)
-
-```bash
-jupyter notebook content-processor.ipynb
-```
-
-Hoặc tự động:
-
-```bash
-jupyter nbconvert --to notebook --execute content-processor.ipynb
-```
-
-Notebook sẽ:
-1. Đọc file markdown mới nhất
-2. Parse nội dung (titles, tags, description, hook)
-3. Gửi đến Claude API để enhance
-4. Tạo video script với timing và visual notes
-5. Export thành JSON và text formats
-
-#### Bước 3: Tạo video scripts
-
-```bash
-python generate_video.py
-```
-
-Tạo:
-- Hướng dẫn tạo video
-- Danh sách công cụ khuyến nghị (CapCut, Premiere Pro, DaVinci Resolve)
-- Thumbnail design notes
-- YouTube upload metadata
-
-## 📁 Cấu Trúc Thư Mục
+## Project Structure
 
 ```
-Claude Code Skill/
-├── src/
-│   ├── index.ts              # MCP Server (11 tools)
-│   └── cli.ts                # CLI Content Generator
-├── build/                    # Compiled JavaScript
-├── content-processor.ipynb   # Jupyter notebook (LLM processing)
-├── generate_video.py         # Video script generator
-├── run-full-pipeline.bat     # Automated pipeline
-├── package.json
-├── tsconfig.json
-├── .env                      # API keys
-│
-├── videos/                   # Generated content
-│   └── 2026-04-20/
-│       ├── youtube-content-2026-04-20-vi.md
-│       └── youtube-content-2026-04-20-en.md
-│
-├── videos_scripts/           # Processed scripts
-│   ├── script_2026-04-20_Title.json
-│   └── script_2026-04-20_Title.txt
-│
-└── generated_videos/         # Video resources
-    ├── audio_temp/
-    ├── title_slide.png
-    └── (video generation outputs)
+main.py                  # CLI entry point
+agent/
+  config.py              # Configuration & environment
+  researcher.py          # YouTube search & data collection
+  synthesizer.py         # GPT-4o content generation
+  video_creator.py       # TTS + slides + video assembly
+  uploader.py            # YouTube OAuth2 upload
+  orchestrator.py        # Pipeline coordinator
+output/                  # Generated files (auto-created)
+  research/              # Research data (JSON)
+  scripts/               # Video scripts (JSON)
+  audio/                 # TTS voiceover files
+  slides/                # Generated slide images
+  videos/                # Final rendered videos
 ```
 
-## 🛠️ Công Cụ Có Sẵn (MCP Server)
+## Output
 
-Khi đã setup Claude Desktop, có thể sử dụng các tool:
-
-### YouTube Research
-- `search_videos` - Tìm video YouTube
-- `get_video_info` - Lấy thông tin video
-- `get_video_comments` - Lấy comments từ video
-- `get_video_transcript` - Lấy transcript
-- `get_channel_info` - Thông tin channel
-- `analyze_video_sentiment` - Phân tích sentiment
-
-### News Aggregation
-- `get_us_politics_news` - Tin chính trị Mỹ
-- `get_crypto_news` - Tin crypto
-- `get_market_news` - Tin thị trường
-- `get_employment_news` - Tin việc làm
-- `generate_youtube_content` - Tạo nội dung (built-in)
-
-## 📊 Dữ Liệu Nguồn
-
-- **US Politics**: Reuters, AP News
-- **Crypto**: CoinTelegraph, CoinDesk, CoinGecko
-- **Markets**: Yahoo Finance, MarketWatch, Bloomberg
-- **Employment**: Bureau of Labor Statistics, LinkedIn
-- **Prices**: CoinGecko API (free, no auth)
-
-## 📝 Output Format
-
-### Markdown Content (Step 1)
-
-```markdown
-# [NEWS DATE]
-
-## CHÍNH TRỊ MỸ (US POLITICS)
-
-### Tin 1: [Title]
-- **Tags:** tag1, tag2
-- **Description:** [Content]
-- **Hook:** [Engaging opening]
-- **Thumbnail Concept:** [Design idea]
-
-## CRYPTO
-
-### Tin 1: ...
-```
-
-### Video Script (Step 3)
-
-```json
-{
-  "title": "Market Update - April 20, 2026",
-  "duration_minutes": 18,
-  "tags": ["finance", "crypto", "markets"],
-  "sections": [
-    {
-      "time_start": "00:00",
-      "time_end": "00:15",
-      "title": "Opening Hook",
-      "content": "...",
-      "visual_notes": "..."
-    }
-  ]
-}
-```
-
-## 🎬 Tạo Video Cuối Cùng
-
-Sau khi có video script, có thể dùng:
-
-### Free Tools
-- **CapCut** (Web): capcut.com - Dễ sử dụng, free
-- **DaVinci Resolve** (Desktop): blackmagicdesign.com - Professional, free
-- **Shotcut** (Desktop): shotcut.org - Open source
-- **OpenShot** (Desktop): openshot.org - Simple
-
-### Paid Tools
-- **Adobe Premiere Pro** - Industry standard
-- **Final Cut Pro** - macOS
-- **Vegas Pro** - Windows
-
-### Workflow
-
-1. ✅ Tạo content với pipeline (bạn đã làm)
-2. 📥 Import script vào video editor
-3. 🎨 Add visuals (B-roll, charts, news footage)
-4. 🎵 Add background music (YouTube Audio Library)
-5. 📝 Add text overlays với timing
-6. 🔄 Add transitions và effects
-7. 🎬 Color grade
-8. 📤 Export (MP4, H.264, 1080p)
-9. 📱 Upload YouTube + Metadata
-
-## 🔧 Troubleshooting
-
-### "Module not found" errors
-```bash
-npm install
-```
-
-### YouTube API errors
-- Kiểm tra API key trong `.env`
-- Verify YouTube Data API v3 enabled
-- Check API quotas
-
-### Anthropic API errors
-- Verify API key trong `.env`
-- Check account credits
-- Rate limiting
-
-### Jupyter not found
-```bash
-pip install jupyter ipykernel
-```
-
-### FFmpeg not found (for video generation)
-```bash
-# Windows (choco)
-choco install ffmpeg
-
-# macOS (brew)
-brew install ffmpeg
-
-# Linux (apt)
-sudo apt install ffmpeg
-```
-
-## 📚 API Documentation
-
-- [YouTube API v3](https://developers.google.com/youtube/v3)
-- [Anthropic Claude API](https://docs.anthropic.com/)
-- [MCP Protocol](https://modelcontextprotocol.io/)
-
-## 🎓 Ví Dụ Sử Dụng
-
-### Chỉ tạo nội dung (không cần video)
-```bash
-npm run content-gen
-```
-
-### Chỉ process Jupyter
-```bash
-jupyter notebook content-processor.ipynb
-```
-
-### Full pipeline (recommended)
-```bash
-run-full-pipeline.bat
-```
-
-## 📞 Support
-
-Nếu gặp vấn đề:
-1. Kiểm tra API keys trong `.env`
-2. Chạy `npm run build` để compile TypeScript
-3. Kiểm tra các dependencies: `npm list`
-4. Xem logs từ MCP server
-
-## 🚀 Next Steps
-
-Sau khi tạo video:
-
-1. **Optimize cho YouTube**
-   - Title: < 60 characters
-   - Description: Include links, timestamps
-   - Tags: 5-10 relevant tags
-   - Thumbnail: 1280x720px
-
-2. **Promote**
-   - Add to playlist
-   - Create shorts từ best parts
-   - Share on social media
-
-3. **Monitor**
-   - Track analytics
-   - Respond to comments
-   - Iterate based on performance
-
-## 📜 License
-
-MIT - Free to use and modify
-
----
-
-**Created with ❤️ for content creators**
-
-Chi tiết thêm về cách sử dụng các tool từ Claude Desktop, xem `.github/copilot-instructions.md`
+Each run produces:
+- `output/research/` - Raw research data from YouTube
+- `output/scripts/` - Generated video script with metadata
+- `output/audio/` - TTS voiceover MP3
+- `output/slides/` - Slide images (1920x1080)
+- `output/videos/` - Final rendered MP4 video
