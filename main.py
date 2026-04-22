@@ -43,6 +43,8 @@ Examples:
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     parser.add_argument("--max-results", type=int, default=None, help="Max YouTube search results")
     parser.add_argument("--voice", type=str, default=None, help="TTS voice (e.g., en-US-GuyNeural)")
+    parser.add_argument("--channel-id", type=str, default=None,
+                        help="Target YouTube channel ID (overrides YOUTUBE_CHANNEL_ID in .env)")
 
     args = parser.parse_args()
     setup_logging(args.verbose)
@@ -53,6 +55,8 @@ Examples:
         config.max_search_results = args.max_results
     if args.voice:
         config.tts_voice = args.voice
+    if args.channel_id:
+        config.youtube_channel_id = args.channel_id
 
     # --list-channels: show all channels and exit
     if args.list_channels:
@@ -62,6 +66,18 @@ Examples:
 
     if not args.topic:
         parser.error("topic is required unless using --list-channels")
+
+    # Require --channel-id when uploading (any privacy)
+    if not args.no_upload and not config.youtube_channel_id:
+        print(f"\nERROR: --channel-id is required when uploading (--privacy '{args.privacy}')")
+        print("  Run: python main.py --list-channels")
+        print("  Then: python main.py \"<topic>\" --privacy private --channel-id UCxxxxxxxxxxxxxxxxxx\n")
+        sys.exit(1)
+
+    if config.youtube_channel_id and config.youtube_channel_id.startswith("UCxxx"):
+        print(f"\nERROR: --channel-id is still set to the placeholder value '{config.youtube_channel_id}'")
+        print("  Run: python main.py --list-channels  to get your real channel ID\n")
+        sys.exit(1)
 
     # Run agent
     agent = Agent(config)

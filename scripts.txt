@@ -1,6 +1,8 @@
 # ============================================================
 # YouTube Automation Agent - Run Commands
 # Usage: copy & paste into PowerShell terminal
+# First run: python main.py --list-channels  → get your Channel IDs
+# Replace UCxxx with real channel ID before running upload commands
 # ============================================================
 
 # ----------------------------------------------------------
@@ -10,8 +12,8 @@ python main.py "breaking news today April 2026" --no-upload
 python main.py "top news stories today" --no-upload
 python main.py "world news highlights today" --no-upload
 
-# With upload (private - safe to test):
-python main.py "breaking news today April 2026" --privacy private
+# Post to YouTube:
+python main.py "breaking news today April 2026" --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
@@ -22,8 +24,8 @@ python main.py "bitcoin price prediction 2026" --no-upload
 python main.py "crypto market analysis this week" --no-upload
 python main.py "ethereum altcoin market trends" --no-upload
 
-# With upload:
-python main.py "bitcoin ethereum crypto market 2026" --privacy private
+# Post to YouTube:
+python main.py "bitcoin ethereum crypto market 2026" --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
@@ -34,8 +36,8 @@ python main.py "Trump administration politics weekly" --no-upload
 python main.py "global politics world leaders this week" --no-upload
 python main.py "US Congress Senate politics latest" --no-upload
 
-# With upload:
-python main.py "US political news this week 2026" --privacy private
+# Post to YouTube:
+python main.py "US political news this week 2026" --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
@@ -46,8 +48,8 @@ python main.py "Federal Reserve interest rate decision 2026" --no-upload
 python main.py "US unemployment rate jobs market economy" --no-upload
 python main.py "inflation GDP US economic outlook 2026" --no-upload
 
-# With upload:
-python main.py "US economy jobs report Fed interest rates 2026" --privacy private
+# Post to YouTube:
+python main.py "US economy jobs report Fed interest rates 2026" --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
@@ -58,18 +60,20 @@ python main.py "ChatGPT Gemini Claude AI comparison 2026" --no-upload
 python main.py "AI agents automation future technology" --no-upload
 python main.py "machine learning deep learning breakthroughs 2026" --no-upload
 
-# With upload:
-python main.py "AI trends 2026 artificial intelligence" --privacy private
+# Post to YouTube:
+python main.py "AI trends 2026 artificial intelligence" --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
 # FULL AUTO PIPELINE - All 5 Topics (Research + Video + Upload)
+# Replace UCxxx with your actual Channel IDs
+# Run first: python main.py --list-channels
 # ----------------------------------------------------------
-python main.py "breaking news today April 2026" --privacy unlisted
-python main.py "bitcoin ethereum crypto market 2026" --privacy unlisted
-python main.py "US political news this week 2026" --privacy unlisted
-python main.py "US economy jobs report Fed interest rates 2026" --privacy unlisted
-python main.py "AI trends 2026 artificial intelligence" --privacy unlisted
+python main.py "breaking news today April 2026"                  --privacy private --channel-id UCxxx
+python main.py "bitcoin ethereum crypto market 2026"             --privacy private --channel-id UCxxx
+python main.py "US political news this week 2026"                --privacy private --channel-id UCxxx
+python main.py "US economy jobs report Fed interest rates 2026"  --privacy private --channel-id UCxxx
+python main.py "AI trends 2026 artificial intelligence"          --privacy private --channel-id UCxxx
 
 
 # ----------------------------------------------------------
@@ -87,6 +91,8 @@ python main.py "AI trends 2026 artificial intelligence" --research-only
 # ----------------------------------------------------------
 # --no-upload    : Create video file only, no YouTube upload
 # --privacy      : private | unlisted | public
+# --channel-id   : Target YouTube channel ID (required for public/unlisted)
+#                  Get your channel IDs: python main.py --list-channels
 # --research-only: Skip video creation, only gather YouTube data
 # --max-results  : Number of source videos (default: 10)
 # --voice        : TTS voice options:

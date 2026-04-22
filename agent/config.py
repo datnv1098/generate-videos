@@ -15,8 +15,7 @@ class Config:
 
     # YouTube OAuth2
     client_secrets_file: str = os.getenv("YOUTUBE_CLIENT_SECRETS_FILE", "client_secrets.json")
-    # Optional: pin a specific channel ID (get it by running: python main.py --list-channels)
-    youtube_channel_id: str = os.getenv("YOUTUBE_CHANNEL_ID", "")
+    youtube_channel_id: str = ""  # Set via --channel-id CLI arg only
 
     # Agent settings
     language: str = os.getenv("DEFAULT_LANGUAGE", "en")
