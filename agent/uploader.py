@@ -14,7 +14,10 @@ from .synthesizer import VideoScript
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly",  # needed to list channels
+]
 
 
 class YouTubeUploader:
@@ -59,6 +62,44 @@ class YouTubeUploader:
         self.youtube = build("youtube", "v3", credentials=self.credentials)
         logger.info("YouTube API authenticated successfully")
 
+    def list_channels(self) -> list[dict]:
+        """List all YouTube channels associated with the authenticated account."""
+        if not self.youtube:
+            self.authenticate()
+
+        response = self.youtube.channels().list(
+            part="snippet,statistics",
+            mine=True,
+            maxResults=50,
+        ).execute()
+
+        channels = []
+        for item in response.get("items", []):
+            channels.append({
+                "id": item["id"],
+                "title": item["snippet"]["title"],
+                "subscriber_count": int(item["statistics"].get("subscriberCount", 0)),
+                "video_count": int(item["statistics"].get("videoCount", 0)),
+            })
+        return channels
+
+    def print_channels(self):
+        """Print all channels to console for user to identify the right one."""
+        channels = self.list_channels()
+        print("\n" + "=" * 50)
+        print("  YOUR YOUTUBE CHANNELS")
+        print("=" * 50)
+        for i, ch in enumerate(channels, 1):
+            print(f"  [{i}] {ch['title']}")
+            print(f"      Channel ID  : {ch['id']}")
+            print(f"      Subscribers : {ch['subscriber_count']:,}")
+            print(f"      Videos      : {ch['video_count']:,}")
+            print()
+        print(f"  To set a specific channel, add to .env:")
+        print(f"  YOUTUBE_CHANNEL_ID=<channel_id_above>")
+        print("=" * 50 + "\n")
+        return channels
+
     def upload(self, video_path: Path, script: VideoScript, privacy: str = "private") -> str:
         """Upload a video to YouTube.
 
@@ -72,6 +113,13 @@ class YouTubeUploader:
         """
         if not self.youtube:
             self.authenticate()
+
+        # Show which channel will be used
+        if self.config.youtube_channel_id:
+            logger.info(f"Uploading to channel ID: {self.config.youtube_channel_id}")
+        else:
+            logger.info("No YOUTUBE_CHANNEL_ID set - uploading to default channel")
+            logger.info("Run 'python main.py --list-channels' to see all your channels")
 
         logger.info(f"Uploading video: '{script.title}'")
 

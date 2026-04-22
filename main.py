@@ -7,6 +7,7 @@ import sys
 
 from agent.config import Config
 from agent.orchestrator import Agent
+from agent.uploader import YouTubeUploader
 
 
 def setup_logging(verbose: bool = False):
@@ -28,14 +29,17 @@ Examples:
   python main.py "python programming tips" --no-upload
   python main.py "crypto market analysis" --privacy unlisted
   python main.py "machine learning" --research-only
+  python main.py --list-channels
         """,
     )
 
-    parser.add_argument("topic", help="Topic to research and create a video about")
+    parser.add_argument("topic", nargs="?", help="Topic to research and create a video about")
     parser.add_argument("--no-upload", action="store_true", help="Skip YouTube upload")
     parser.add_argument("--privacy", choices=["private", "unlisted", "public"], default="private",
                         help="YouTube privacy status (default: private)")
     parser.add_argument("--research-only", action="store_true", help="Only do research, skip video creation")
+    parser.add_argument("--list-channels", action="store_true",
+                        help="List all YouTube channels on this account and exit")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
     parser.add_argument("--max-results", type=int, default=None, help="Max YouTube search results")
     parser.add_argument("--voice", type=str, default=None, help="TTS voice (e.g., en-US-GuyNeural)")
@@ -49,6 +53,15 @@ Examples:
         config.max_search_results = args.max_results
     if args.voice:
         config.tts_voice = args.voice
+
+    # --list-channels: show all channels and exit
+    if args.list_channels:
+        uploader = YouTubeUploader(config)
+        uploader.print_channels()
+        sys.exit(0)
+
+    if not args.topic:
+        parser.error("topic is required unless using --list-channels")
 
     # Run agent
     agent = Agent(config)
