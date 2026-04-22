@@ -3,6 +3,8 @@
 # Usage: copy & paste into PowerShell terminal
 # First run: python main.py --list-channels  → get your Channel IDs
 # Replace UCxxx with real channel ID before running upload commands
+
+Đạt
 # ============================================================
 
 # ----------------------------------------------------------
@@ -25,6 +27,8 @@ python main.py "crypto market analysis this week" --no-upload
 python main.py "ethereum altcoin market trends" --no-upload
 
 # Post to YouTube:
+python main.py "bitcoin ethereum crypto market 2026" --privacy private --channel-id UCxxx
+# TEST ĐẠT NGUYÊN Channel
 python main.py "bitcoin ethereum crypto market 2026" --privacy private --channel-id UCxxx
 
 

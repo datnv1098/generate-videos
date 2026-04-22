@@ -67,8 +67,10 @@ Examples:
     if not args.topic:
         parser.error("topic is required unless using --list-channels")
 
-    # Require --channel-id when uploading (any privacy)
-    if not args.no_upload and not config.youtube_channel_id:
+    should_upload = not args.no_upload and not args.research_only
+
+    # Require --channel-id only when upload is enabled
+    if should_upload and not config.youtube_channel_id:
         print(f"\nERROR: --channel-id is required when uploading (--privacy '{args.privacy}')")
         print("  Run: python main.py --list-channels")
         print("  Then: python main.py \"<topic>\" --privacy private --channel-id UCxxxxxxxxxxxxxxxxxx\n")

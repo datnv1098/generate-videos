@@ -59,7 +59,9 @@ Rules:
 - Include data, statistics, and specific examples
 - Optimize for YouTube SEO
 - Structure with clear sections for a 8-12 minute video
-- Write in English"""
+- Write in English only
+- All fields in the JSON response must be in English
+- If source comments or transcript fragments are not in English, ignore them unless their meaning is clear and can be restated in English"""
 
 SCRIPT_PROMPT = """Based on the following research data from YouTube videos about "{topic}", 
 create a complete video script.
@@ -85,6 +87,7 @@ Create a JSON response with this exact structure:
 }}
 
 Create 5-7 sections. Each section narration should be 100-200 words.
+Write every title, description, tag, heading, narration, visual note, and outro in English only.
 Respond with ONLY the JSON, no markdown formatting."""
 
 

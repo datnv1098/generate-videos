@@ -151,8 +151,8 @@ class YouTubeResearcher:
         """Get video transcript/captions."""
         try:
             transcript_api = YouTubeTranscriptApi()
-            transcript_list = transcript_api.get_transcript(video_id, languages=["en"])
-            return " ".join(entry["text"] for entry in transcript_list)
+            transcript = transcript_api.fetch(video_id, languages=[self.config.language])
+            return " ".join(entry.text for entry in transcript if getattr(entry, "text", "").strip())
         except Exception as e:
             logger.warning(f"Could not get transcript for {video_id}: {e}")
             return ""

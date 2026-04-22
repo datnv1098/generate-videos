@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass, field
 from datetime import date
@@ -5,6 +6,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -38,6 +41,14 @@ class Config:
     output_dir: Path = field(default_factory=lambda: Path("output"))
 
     def __post_init__(self):
+        if self.language.lower() != "en":
+            logger.warning("DEFAULT_LANGUAGE=%s is not supported for this pipeline. Falling back to English.", self.language)
+            self.language = "en"
+
+        if not self.tts_voice.lower().startswith("en-"):
+            logger.warning("TTS_VOICE=%s is not an English voice. Falling back to en-US-AriaNeural.", self.tts_voice)
+            self.tts_voice = "en-US-AriaNeural"
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def today_dir(self, subdir: str) -> Path:
