@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from googleapiclient.discovery import build
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
 
 from .config import Config
 
@@ -148,14 +148,36 @@ class YouTubeResearcher:
         return stats
 
     def get_transcript(self, video_id: str) -> str:
-        """Get video transcript/captions."""
+        """Get video transcript/captions with fallback to any available language."""
         try:
-            transcript_api = YouTubeTranscriptApi()
-            transcript = transcript_api.fetch(video_id, languages=[self.config.language])
-            return " ".join(entry.text for entry in transcript if getattr(entry, "text", "").strip())
+            api = YouTubeTranscriptApi()
+
+            # 1st attempt: preferred language + common English variants
+            try:
+                transcript = api.fetch(
+                    video_id,
+                    languages=[self.config.language, "en", "en-US", "en-GB", "en-AU"]
+                )
+                return " ".join(entry.text for entry in transcript if entry.text.strip())
+            except (NoTranscriptFound, Exception):
+                pass
+
+            # 2nd attempt: list all available transcripts and use the first one
+            try:
+                transcript_list = api.list(video_id)
+                for t in transcript_list:
+                    try:
+                        fetched = t.fetch()
+                        return " ".join(entry.text for entry in fetched if entry.text.strip())
+                    except Exception:
+                        continue
+            except (TranscriptsDisabled, VideoUnavailable):
+                pass
+
         except Exception as e:
-            logger.warning(f"Could not get transcript for {video_id}: {e}")
-            return ""
+            logger.debug(f"No transcript available for {video_id}: {type(e).__name__}")
+
+        return ""
 
     def get_comments(self, video_id: str, max_results: int = 20) -> list[str]:
         """Get top comments for a video."""

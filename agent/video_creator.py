@@ -1,13 +1,11 @@
 """Video Creation Module - Generate voiceover, slides, and assemble video."""
 
 import asyncio
-import io
 import logging
 import textwrap
 from pathlib import Path
 
 import edge_tts
-import requests
 from moviepy import (
     AudioFileClip,
     CompositeVideoClip,
@@ -18,6 +16,7 @@ from moviepy import (
 from PIL import Image, ImageDraw, ImageFont
 
 from .config import Config
+from .image_generator import ImageGenerator
 from .synthesizer import VideoScript
 
 logger = logging.getLogger(__name__)
@@ -28,6 +27,7 @@ class VideoCreator:
         self.config = config
         self.width = config.video_width
         self.height = config.video_height
+        self.image_generator = ImageGenerator(config)
 
     async def generate_voiceover(self, script: VideoScript) -> Path:
         """Generate TTS audio from the video script using edge-tts."""
@@ -42,24 +42,49 @@ class VideoCreator:
         logger.info(f"Voiceover saved to {output_path}")
         return output_path
 
-    def _fetch_theme_image(self, keywords: str) -> Image.Image | None:
-        """Fetch a thematic background image from Unsplash API based on keywords.
+    def _generate_slide_background(self, title: str, description: str, slides_dir: Path) -> Image.Image | None:
+        """Generate slide background image using DALL-E.
+        
+        Args:
+            title: Slide title
+            description: Visual notes/description for image generation
+            slides_dir: Directory to save generated image
         
         Returns:
-            PIL Image or None if fetch fails
+            PIL Image or None if generation fails
         """
         try:
-            # Use Unsplash API (free, no key required for basic usage)
-            # Limit size to reduce network overhead
-            search_query = keywords.split()[0] if keywords else "abstract"
-            url = f"https://source.unsplash.com/1920x1080/?{search_query}"
+            # Create a sanitized filename
+            safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' 
+                                for c in title).strip().replace(' ', '_')[:30]
+            image_path = slides_dir / f"{safe_title}_bg.png"
             
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                image = Image.open(io.BytesIO(response.content))
-                return image.convert("RGB")
+            logger.debug(f"Generating slide background for '{title}' -> {image_path}")
+            
+            # Generate image using DALL-E
+            result_path = self.image_generator.generate_slide_image(description, title, image_path)
+            
+            # Verify image was saved successfully
+            if result_path is None:
+                logger.warning(f"DALL-E image generation returned None for '{title}'")
+                return None
+            
+            if not result_path.exists():
+                logger.error(f"Generated image path does not exist: {result_path}")
+                return None
+            
+            # Load and return the image
+            try:
+                img = Image.open(result_path)
+                img_rgb = img.convert("RGB")
+                logger.debug(f"✓ Successfully loaded background image: {result_path}")
+                return img_rgb
+            except Exception as load_err:
+                logger.error(f"Failed to load generated image: {load_err}")
+                return None
+                
         except Exception as e:
-            logger.debug(f"Failed to fetch theme image for '{keywords}': {e}")
+            logger.error(f"Error generating background for '{title}': {e}")
         
         return None
 
@@ -76,24 +101,19 @@ class VideoCreator:
         """Create a slide with optional background image and text overlay."""
         # Create base image
         if bg_image:
-            img = bg_image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+            # Use DALL-E generated image as background
+            img = bg_image.resize((self.width, self.height), Image.Resampling.LANCZOS).convert("RGBA")
+            # Semi-transparent dark overlay for text readability
+            overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 120))
+            img = Image.alpha_composite(img, overlay).convert("RGB")
         else:
+            # Text-only: plain solid color background
             img = Image.new("RGB", (self.width, self.height), bg_color)
         
-        draw = ImageDraw.Draw(img, "RGBA")
-
-        # Add dark overlay for better text readability
-        overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 100))
-        img.paste(overlay, (0, 0), overlay)
         draw = ImageDraw.Draw(img)
 
         # Draw accent bar at top
         draw.rectangle([0, 0, self.width, 8], fill=accent_color)
-
-        # Add subtle gradient overlay for depth
-        for y in range(self.height):
-            alpha = int(50 * (y / self.height))
-            draw.line([(0, y), (self.width, y)], fill=(alpha, alpha, alpha + 10))
 
         # Load fonts
         try:
@@ -164,14 +184,14 @@ class VideoCreator:
         return filepath
 
     def create_slides(self, script: VideoScript) -> list[Path]:
-        """Create slide images for each section of the script with thematic background images."""
+        """Create slide images for each section of the script with AI-generated background images."""
         slides_dir = self.config.today_dir("slides")
         slide_paths = []
 
-        logger.info("Fetching thematic background images...")
+        logger.info("Generating DALL-E background images for slides...")
 
-        # Title slide - fetch image based on title keywords
-        title_bg = self._fetch_theme_image(script.title)
+        # Title slide - generate image based on title
+        title_bg = self._generate_slide_background(script.title, script.title, slides_dir)
         title_path = self._create_slide_with_background(
             slides_dir / "00_title.png",
             title=script.title,
@@ -182,7 +202,8 @@ class VideoCreator:
         slide_paths.append(title_path)
 
         # Hook slide
-        hook_bg = self._fetch_theme_image(script.tags[0] if script.tags else "")
+        hook_description = script.tags[0] if script.tags else "engaging content"
+        hook_bg = self._generate_slide_background("Hook", f"Opening hook about {script.title}", slides_dir)
         hook_path = self._create_slide_with_background(
             slides_dir / "01_hook.png",
             title=script.hook[:80],
@@ -192,11 +213,15 @@ class VideoCreator:
         )
         slide_paths.append(hook_path)
 
-        # Section slides - each with thematic background
+        # Section slides - each with AI-generated background
         for i, section in enumerate(script.sections, 2):
-            # Fetch background based on section heading or visual notes
-            section_keywords = section.get("visual_notes", section["heading"])
-            section_bg = self._fetch_theme_image(section_keywords)
+            # Generate background based on section heading and visual notes
+            section_description = section.get("visual_notes", section["heading"])
+            section_bg = self._generate_slide_background(
+                section["heading"], 
+                section_description,
+                slides_dir
+            )
             
             slide_path = self._create_slide_with_background(
                 slides_dir / f"{i:02d}_{section['heading'][:20].replace(' ', '_')}.png",
@@ -208,7 +233,7 @@ class VideoCreator:
             slide_paths.append(slide_path)
 
         # Outro slide
-        outro_bg = self._fetch_theme_image("success celebration")
+        outro_bg = self._generate_slide_background("Outro", "Celebratory outro slide with call to action", slides_dir)
         outro_path = self._create_slide_with_background(
             slides_dir / f"{len(script.sections) + 2:02d}_outro.png",
             title="Thanks for watching!",
@@ -285,7 +310,7 @@ class VideoCreator:
         return filepath
 
     def create_thumbnail(self, script, topic_name: str = None) -> Path:
-        """Create a professional video thumbnail based on thumbnail_concept.
+        """Create a professional video thumbnail using DALL-E.
         
         YouTube standard thumbnail size: 1280x720 pixels
         """
@@ -299,34 +324,33 @@ class VideoCreator:
         videos_dir.mkdir(parents=True, exist_ok=True)
         output_path = videos_dir / "thumbnail.png"
 
-        logger.info(f"Creating thumbnail from concept: {script.thumbnail_concept}")
+        logger.info(f"Generating DALL-E thumbnail for: {script.title}")
 
-        # Fetch background image for thumbnail based on title
-        bg_image = self._fetch_theme_image(script.title)
+        try:
+            # Generate thumbnail using DALL-E
+            result_path = self.image_generator.generate_thumbnail_image(
+                script.thumbnail_concept,
+                script.title,
+                script.tags,
+                output_path
+            )
 
-        # Create thumbnail with standard YouTube dimensions
+            if result_path and result_path.exists():
+                logger.info(f"✓ Thumbnail created successfully: {result_path}")
+                return result_path
+            else:
+                logger.warning("DALL-E thumbnail generation failed, using fallback")
+                return self._create_fallback_thumbnail(script, output_path)
+                
+        except Exception as e:
+            logger.error(f"Error creating thumbnail: {e}")
+            return self._create_fallback_thumbnail(script, output_path)
+
+    def _create_fallback_thumbnail(self, script, output_path: Path) -> Path:
+        """Create a fallback thumbnail with text overlay when DALL-E generation fails."""
         thumb_width, thumb_height = 1280, 720
-
-        if bg_image:
-            img = bg_image.resize((thumb_width, thumb_height), Image.Resampling.LANCZOS)
-        else:
-            img = Image.new("RGB", (thumb_width, thumb_height), (20, 20, 40))
-
-        draw = ImageDraw.Draw(img, "RGBA")
-
-        # Add dark overlay for text readability
-        overlay = Image.new("RGBA", (thumb_width, thumb_height), (0, 0, 0, 80))
-        img.paste(overlay, (0, 0), overlay)
+        img = Image.new("RGB", (thumb_width, thumb_height), (20, 20, 40))
         draw = ImageDraw.Draw(img)
-
-        # Draw bright accent border
-        accent_color = (255, 100, 50)
-        border_width = 8
-        draw.rectangle(
-            [border_width, border_width, thumb_width - border_width, thumb_height - border_width],
-            outline=accent_color,
-            width=border_width
-        )
 
         # Load font
         try:
@@ -340,11 +364,20 @@ class VideoCreator:
                 title_font = ImageFont.load_default()
                 subtitle_font = ImageFont.load_default()
 
-        # Draw main title/concept
-        title = script.title[:40]  # Truncate for thumbnail
+        # Draw bright accent border
+        accent_color = (255, 100, 50)
+        border_width = 8
+        draw.rectangle(
+            [border_width, border_width, thumb_width - border_width, thumb_height - border_width],
+            outline=accent_color,
+            width=border_width
+        )
+
+        # Draw title
+        title = script.title[:40]
         wrapped_title = textwrap.fill(title, width=20)
 
-        # Title with outline for visibility
+        # Title with outline
         for offset_x in [-2, -1, 0, 1, 2]:
             for offset_y in [-2, -1, 0, 1, 2]:
                 draw.multiline_text(
@@ -366,7 +399,7 @@ class VideoCreator:
             align="center",
         )
 
-        # Add a key visual element or tag
+        # Add tags
         tags_text = " • ".join(script.tags[:2]) if script.tags else ""
         if tags_text:
             draw.text(
@@ -378,7 +411,7 @@ class VideoCreator:
             )
 
         img.save(output_path)
-        logger.info(f"Thumbnail saved to {output_path}")
+        logger.info(f"Fallback thumbnail saved to {output_path}")
         return output_path
 
     def assemble_video(self, slide_paths: list[Path], audio_path: Path, topic_name: str = None) -> Path:

@@ -5,14 +5,14 @@ Automated pipeline: **Research → Synthesize → Create Video → Upload to You
 ## Architecture
 
 ```
-┌──────────────┐    ┌───────────────┐    ┌──────────────┐    ┌──────────┐
-│  1. RESEARCH │───▶│ 2. SYNTHESIZE │───▶│ 3. CREATE    │───▶│ 4.UPLOAD │
-│  (YouTube    │    │ (OpenAI       │    │    VIDEO     │    │(YouTube  │
-│   Data API)  │    │  GPT-4o)      │    │ (TTS+Slides) │    │  OAuth2) │
-└──────────────┘    └───────────────┘    └──────────────┘    └──────────┘
-  Search topic       Analyze data        Edge-TTS audio      Auto-upload
-  Get transcripts    Write script        PIL slide images    Set metadata
-  Get comments       SEO optimize        MoviePy assembly    Tags/desc
+┌──────────────┐    ┌───────────────┐    ┌──────────────────┐    ┌──────────┐
+│  1. RESEARCH │───▶│ 2. SYNTHESIZE │───▶│ 3. CREATE VIDEO  │───▶│ 4.UPLOAD │
+│  (YouTube    │    │ (OpenAI       │    │ (DALL-E+TTS+MP)  │    │(YouTube  │
+│   Data API)  │    │  GPT-4o)      │    │ Slides+Thumbnail │    │  OAuth2) │
+└──────────────┘    └───────────────┘    └──────────────────┘    └──────────┘
+  Search topic       Analyze data        AI-generated images    Auto-upload
+  Get transcripts    Write script        Edge-TTS audio         Set metadata
+  Get comments       SEO optimize        MoviePy assembly       Tags/desc
 ```
 
 ## Quick Start
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 # 2. Set up API keys in .env
 #    - YOUTUBE_API_KEY (from Google Cloud Console)
-#    - OPENAI_API_KEY (from OpenAI)
+#    - OPENAI_API_KEY (from OpenAI) - Used for GPT-4o (scripts) & DALL-E 3 (images)
 #    - client_secrets.json (for YouTube upload - OAuth2)
 
 # 3. Run the agent
@@ -59,9 +59,10 @@ python main.py "AI" -v
 2. Create a project → Enable **YouTube Data API v3**
 3. Create API Key → Copy to `.env` as `YOUTUBE_API_KEY`
 
-### 2. OpenAI API Key (for content synthesis)
+### 2. OpenAI API Key (for GPT-4o scripts and DALL-E 3 images)
 1. Go to [OpenAI Platform](https://platform.openai.com/)
 2. Create API Key → Copy to `.env` as `OPENAI_API_KEY`
+3. Ensure account has DALL-E 3 access (typically available for paid accounts)
 
 ### 3. YouTube OAuth2 (for uploading)
 1. In Google Cloud Console → **APIs & Services** → **Credentials**
@@ -78,6 +79,7 @@ agent/
   researcher.py          # YouTube search & data collection
   synthesizer.py         # GPT-4o content generation
   video_creator.py       # TTS + slides + video assembly
+  image_generator.py     # DALL-E 3 image generation
   uploader.py            # YouTube OAuth2 upload
   orchestrator.py        # Pipeline coordinator
 output/                  # Generated files (auto-created)

@@ -33,8 +33,9 @@ class Config:
     video_height: int = 1080
     tts_voice: str = os.getenv("TTS_VOICE", "en-US-AriaNeural")
 
-    # LLM settings
+    # LLM & Image Generation settings
     openai_model: str = "gpt-4o"
+    openai_image_model: str = "dall-e-3"  # For generating slide backgrounds and thumbnails
     max_tokens: int = 8000  # Increased for 10-15 sections per video
 
     # Paths
