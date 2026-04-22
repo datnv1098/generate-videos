@@ -35,7 +35,7 @@ class Config:
 
     # LLM settings
     openai_model: str = "gpt-4o"
-    max_tokens: int = 4096
+    max_tokens: int = 8000  # Increased for 10-15 sections per video
 
     # Paths
     output_dir: Path = field(default_factory=lambda: Path("output"))
